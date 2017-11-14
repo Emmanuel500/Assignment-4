@@ -10,15 +10,29 @@
 //MEM_POLICY_FIRSTFIT 0
 //MEM_POLICY_BESTFIT  1
 //MEM_POLICY_WORSTFIT 2
-
+typedef struct free_memory {
+	int size;
+	struct free_memory *next;
+} free_mem;
+typedef struct allocated_memory {
+	int size;
+	struct allocated_memory *next;
+} alloc_mem;
+typedef struct all_memory {
+	int maxSize;
+	int freeMem;
+	int policy;
+	struct free_memory *firstFree;
+	
+} all_mem;
 int mem() {
-void *pointer;
+all_mem *pointer;
 
     int Mem_Init(int size, int policy) {
 	// open the /dev/zero device
 	int fd = open("/dev/zero", O_RDWR);
 	// size (in bytes) must be divisible by page size
-	pointer = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	pointer = (())mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 	if (pointer == MAP_FAILED) {
 	   perror("mmap");
 	   return -1;
