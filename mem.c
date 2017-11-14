@@ -10,19 +10,19 @@
 //MEM_POLICY_FIRSTFIT 0
 //MEM_POLICY_BESTFIT  1
 //MEM_POLICY_WORSTFIT 2
-typedef struct allocated_memory {
+
+struct allocatedMemory {
 	int size;
 	int type;
 	struct allocated_memory *next;
-} alloc_mem;
+};
 int mem() {
-alloc_mem *pointer;
-
+struct allocatedMemory *pointer;
     int Mem_Init(int size, int policy) {
 	// open the /dev/zero device
 	int fd = open("/dev/zero", O_RDWR);
 	// size (in bytes) must be divisible by page size
-	pointer = (alloc_mem *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	pointer = mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 	if (pointer == MAP_FAILED) {
 	   perror("mmap");
 	   return -1;
@@ -30,9 +30,9 @@ alloc_mem *pointer;
 	// close the device (don't worry, mapping should be unaffected)
 	close(fd);
 	pointer.size = size;
-	return pointer;
+	return 0;
     }
-
+	
     void* Mem_Alloc(int size) {
 	
     }
