@@ -10,14 +10,15 @@
 //MEM_POLICY_FIRSTFIT 0
 //MEM_POLICY_BESTFIT  1
 //MEM_POLICY_WORSTFIT 2
-
-struct allocatedMemory {
+typedef struct allocated_memory {
 	int size;
 	int type;
+	int policy;
 	struct allocated_memory *next;
-};
+}alloc_mem;
 int mem() {
-struct allocatedMemory *pointer;
+alloc_mem *pointer;
+
     int Mem_Init(int size, int policy) {
 	// open the /dev/zero device
 	int fd = open("/dev/zero", O_RDWR);
@@ -27,12 +28,14 @@ struct allocatedMemory *pointer;
 	   perror("mmap");
 	   return -1;
 	}
+
 	// close the device (don't worry, mapping should be unaffected)
 	close(fd);
-	pointer.size = size;
+	(*pointer).size = size;
+	(*pointer).policy = policy;
 	return 0;
     }
-	
+
     void* Mem_Alloc(int size) {
 	
     }
