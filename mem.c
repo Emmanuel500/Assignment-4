@@ -75,6 +75,7 @@ int Mem_Init(int size, int policy)
 	pointer->first->next = NULL;
 
 	printf("Head address: %8x\nTotal size = %d\n", pointer, pointer->freeSize);
+	printf("Size of = %d\n", sizeof(*pointer));
 	printf("Free address: %8x\nFragment size = %d\n", pointer->first, pointer->first->size);
 
 	return 0;
@@ -145,8 +146,9 @@ void* Mem_Alloc(int size)
 				}
 			}
 		}
+		current = current->next;
 	}
-	// Check if the right fragment was ever found
+	// Check if the right node was ever found
 	if(found == NULL)
 	{
 		printf("Unable to allocate size = %d\n", size);
@@ -154,23 +156,24 @@ void* Mem_Alloc(int size)
 	}
 
 	// Allocate memory and change free memory size
-	found->size = size;
 	found->type = MEM_TYPE_ALLOC;
-	found->next = found + sizeof(found) + size;
-	pointer->freeSize -= sizeof(found) + size;
-	found->next->size = pointer->freeSize;
+	found->next = found + sizeof(*found) + size;
 	found->next->type = MEM_TYPE_FREE;
 	found->next->next = NULL;
+	found->next->size = found->size - sizeof(*found) - size;
+	found->size = size;
+	pointer->freeSize -= sizeof(*found) + size;
 
 	printf("Allocated address: %8x\nFragment size = %d\n", found, found->size);
+	printf("Size of = %d\n", sizeof(*found));
 
 	current = pointer->first;
-	while (current->next != NULL)
+	while (current != NULL)
 	{
 		printf("Fragment address: %8x\nFragment type = %d\nFragment size = %d\n", current, current->type, current->size);
 		current = current->next;
 	}
-	printf("Fragment address: %8x\nFragment type = %d\nFragment size = %d\n", current, current->type, current->size);
+	return found;
 }
 
 int Mem_Free(void* ptr)
@@ -229,6 +232,7 @@ int main(int argc, char* argv[])
 	}
 
 	Mem_Alloc(137);
+	Mem_Alloc(257);
 
 	return 0;
 }
