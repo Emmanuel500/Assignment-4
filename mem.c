@@ -19,9 +19,13 @@ typedef struct memory {
 	int type;
 	struct memory *next;
 }mem;
+typedef struct header {
+	int freeSize;
+	struct memory *first;
+}head;
 
 int static mem_policy = -1;
-mem *pointer = NULL;
+head *pointer = NULL;
 mem *tempPoint = NULL;
 
 int Mem_Init(int size, int policy)
@@ -56,7 +60,7 @@ int Mem_Init(int size, int policy)
 	// memory chunk
 
 	int fd = open("/dev/zero", O_RDWR);
-	pointer = (mem *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
+	pointer = (head *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 
 	if (pointer == NULL)
 	{
@@ -64,11 +68,13 @@ int Mem_Init(int size, int policy)
 	}
 
 	close (fd);
-	pointer->size = size - sizeof(mem);
-	pointer->type = MEM_TYPE_FREE;
-	pointer->next = NULL;
+	pointer->freeSize = size;
+	pointer->first = pointer + sizeof(*pointer);
+	pointer->first->size = size - sizeof(*pointer);
+	pointer->first->type = MEM_TYPE_FREE;
+	pointer->first->next = NULL;
 
-	printf("Fragment address: %8x\nsize = %d\n", pointer, pointer->size);
+	printf("Fragment address: %8x\nsize = %d\n", pointer->first, pointer->first->size);
 
 	return 0;
 }
