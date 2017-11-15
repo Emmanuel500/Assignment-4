@@ -23,11 +23,8 @@ typedef struct header {
 	int freeSize;
 	struct memory *first;
 }head;
-
 int static mem_policy = -1;
 head *pointer = NULL;
-mem *tempPoint = NULL;
-
 int Mem_Init(int size, int policy)
 {
 	if (size <= 0)
@@ -42,23 +39,17 @@ int Mem_Init(int size, int policy)
 	{
 		mem_policy = policy;
 	}
-
 	// align size with page size
 	int page_size = getpagesize();
-
 	printf("Size of region = %d\n", size);
 	printf("Page size = %d\n", page_size);
-
 	int diff = size % page_size;
 	if (diff != 0)
 	{
 		size += (page_size - diff);
 	}
-
 	printf("Size of region to be allocated = %d\n", size);
-
 	// memory chunk
-
 	int fd = open("/dev/zero", O_RDWR);
 	pointer = (head *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 
@@ -66,16 +57,13 @@ int Mem_Init(int size, int policy)
 	{
 		return -1;
 	}
-
 	close (fd);
 	pointer->freeSize = size;
-	pointer->first = pointer + sizeof(*pointer);
+	pointer->first = (mem*)pointer + sizeof(*pointer);
 	pointer->first->size = size - sizeof(*pointer);
 	pointer->first->type = MEM_TYPE_FREE;
 	pointer->first->next = NULL;
-
-	printf("Fragment address: %8x\nsize = %d\n", pointer->first, pointer->first->size);
-
+	//printf("Fragment address: %8x\nsize = %d\n", pointer->first, pointer->first->size);
 	return 0;
 }
 
@@ -85,26 +73,21 @@ void* Mem_Alloc(int size) {
 	{
 		return NULL;
 	}
-
-	//
 }
 
 int Mem_Free(void* ptr) {
-
+	
 }
 
 int Mem_IsValid(void* ptr) {
-	tempPoint = pointer;
-	do
-	{
-		if ((*tempPoint).type == 1 && (tempPoint == ptr || ptr == (tempPoint + (*tempPoint).size) || (tempPoint < ptr && (tempPoint + (*tempPoint).size) > ptr)))
-		{
-			return 1;
-		}
-		else
-		{
-			tempPoint = (*tempPoint).next;
-		}
+	mem *tempPoint = pointer->first;
+	do {
+	   if ((tempPoint->type == MEM_TYPE_ALLOC) && (ptr <= (void*)tempPoint && ptr >= ((void*)tempPoint + tempPoint->size))) {
+	      return 1;
+	   }
+	   else {
+		tempPoint = (*tempPoint).next;
+	   }
 	} while ((*tempPoint).next != NULL);
 	return 0;
 }
@@ -119,15 +102,10 @@ float Mem_GetFragmentation() {
 
 int main(int argc, char* argv[])
 {
-	printf("init memory allocator...");
-	if (Mem_Init(REGION_SIZE, MEM_POLICY_FIRSTFIT) < 0)
-	{
-		printf("Unable to initialize memory allocator!\n");
-		return -1;
-	}
-	else
-	{
-		printf("Success!\n");
-	}
-	return 0;
+  printf("init memory allocator...");
+  if(Mem_Init(REGION_SIZE, MEM_POLICY_FIRSTFIT) < 0) {
+    printf("  unable to initialize memory allocator!\n");
+    return -1;
+  } else printf("  success!\n");
+  return 0;
 }
