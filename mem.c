@@ -25,6 +25,7 @@ typedef struct header {
 }head;
 int static mem_policy = -1;
 head *pointer = NULL;
+
 int Mem_Init(int size, int policy)
 {
 	if (size <= 0)
@@ -52,7 +53,6 @@ int Mem_Init(int size, int policy)
 	// memory chunk
 	int fd = open("/dev/zero", O_RDWR);
 	pointer = (head *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-
 	if (pointer == NULL)
 	{
 		return -1;
@@ -76,7 +76,16 @@ void* Mem_Alloc(int size) {
 }
 
 int Mem_Free(void* ptr) {
-	
+	mem *tempPoint = pointer->first;
+	do {
+	   if ((tempPoint->type == MEM_TYPE_ALLOC) && (ptr <= (void*)tempPoint && ptr >= ((void*)tempPoint + tempPoint->size))) {
+	      return 0;
+	   }
+	   else {
+		tempPoint = (*tempPoint).next;
+	   }
+	} while ((*tempPoint).next != NULL);
+	return -1;
 }
 
 int Mem_IsValid(void* ptr) {
@@ -107,5 +116,6 @@ int main(int argc, char* argv[])
     printf("  unable to initialize memory allocator!\n");
     return -1;
   } else printf("  success!\n");
+
   return 0;
 }
