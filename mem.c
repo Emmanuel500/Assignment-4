@@ -10,7 +10,6 @@
 //MEM_POLICY_FIRSTFIT 0
 //MEM_POLICY_BESTFIT  1
 //MEM_POLICY_WORSTFIT 2
-#define REGION_SIZE (10*1024)
 #define MEM_TYPE_FREE 0
 #define MEM_TYPE_ALLOC 1
 
@@ -22,14 +21,20 @@ typedef struct memory {
 
 typedef struct header {
 	int freeSize;
+	struct memory *current;
+	struct memory *found;
 	struct memory *first;
 }head;
 
 int static mem_policy = -1;
 head *pointer = NULL;
-
 int Mem_Init(int size, int policy)
 {
+	// Check for initialization
+	if (mem_policy != -1)
+	{
+		return -1;
+	}
 	// Check for valid input parameters and set policy
 	if (size <= 0)
 	{
@@ -43,17 +48,13 @@ int Mem_Init(int size, int policy)
 	{
 		mem_policy = policy;
 	}
-
 	// Adjust requested size to a multiple of page size
 	int page_size = getpagesize();
-	printf("Requested memory size = %d\n", size);
-	printf("Page size = %d\n", page_size);
 	int diff = size % page_size;
 	if (diff != 0)
 	{
 		size += (page_size - diff);
 	}
-	printf("Adjusted memory size = %d\n", size);
 	int fd = open("/dev/zero", O_RDWR);
 	pointer = (head *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
 	if (pointer == NULL)
@@ -69,15 +70,16 @@ int Mem_Init(int size, int policy)
 	pointer->first->type = MEM_TYPE_FREE;
 	pointer->first->next = NULL;
 
-	//printf("Head address: %8x\nTotal size = %d\n", pointer, pointer->freeSize);
-	//printf("Size of = %d\n", sizeof(*pointer));
-	//printf("Free address: %8x\nFragment size = %d\n", pointer->first, pointer->first->size);
-
 	return 0;
 }
 
 void* Mem_Alloc(int size)
 {
+	// Check for initialization
+	if (mem_policy == -1)
+	{
+		return NULL;
+	}
 	// Check for valid input parameters
 	if (size <= 0 || mem_policy == -1)
 	{
@@ -87,133 +89,147 @@ void* Mem_Alloc(int size)
 	{
 		return NULL;
 	}
-
-	mem *current = pointer->first;
-	mem *found = NULL;
-
+	pointer->current = pointer->first;
+	pointer->found = NULL;
 	// Check each free fragment for valid sizes
-	while (current != NULL)
+	while (pointer->current != NULL)
 	{
 		// Finds the first valid free fragment
 		if (mem_policy == MEM_POLICY_FIRSTFIT)
 		{
-			if (current->type == MEM_TYPE_FREE)
+			if (pointer->current->type == MEM_TYPE_FREE)
 			{
-				if (current->size > size)
+				if (pointer->current->size > size)
 				{
-					found = current;
-					//printf("First address: %8x\nFragment size = %d\n", current, current->size);
+					pointer->found = pointer->current;
 					break;
 				}
 			}
 		}
-		// Finds the smallest valid free fragment
+		// Finds the smallest valid free fragmen
 		else if (mem_policy == MEM_POLICY_BESTFIT)
 		{
-			if (current->type == MEM_TYPE_FREE)
+			if (pointer->current->type == MEM_TYPE_FREE)
 			{
-				if (current->size > size && found == NULL)
+				if (pointer->current->size > size && pointer->found == NULL)
 				{
-					found = current;
-					//printf("Best address: %8x\nFragment size = %d\n", current, current->size);
+					pointer->found = pointer->current;
 				}
-				else if (current->size > size && found->size > current->size)
+				else if (pointer->current->size > size && pointer->found->size > pointer->current->size)
 				{
-					found = current;
-					//printf("Best address: %8x\nFragment size = %d\n", current, current->size);
+					pointer->found = pointer->current;
 				}
 			}
 		}
 		// Finds the largest valid free fragment
 		else if (mem_policy == MEM_POLICY_WORSTFIT)
 		{
-			if (current->type == MEM_TYPE_FREE)
+			if (pointer->current->type == MEM_TYPE_FREE)
 			{
-				if (current->size > size && found == NULL)
+				if (pointer->current->size > size && pointer->found == NULL)
 				{
-					found = current;
-					//printf("Worst address: %8x\nFragment size = %d\n", current, current->size);
+					pointer->found = pointer->current;
 				}
-				else if (current->size > size && current->size > found->size)
+				else if (pointer->current->size > size && pointer->current->size > pointer->found->size)
 				{
-					found = current;
-					//printf("Worst address: %8x\nFragment size = %d\n", current, current->size);
+					pointer->found = pointer->current;
 				}
 			}
 		}
-		current = current->next;
+		pointer->current = pointer->current->next;
 	}
 	// Check if the right node was ever found
-	if(found == NULL)
+	if(pointer->found == NULL)
 	{
-		printf("Unable to allocate size = %d\n", size);
 		return NULL;
 	}
-
 	// Allocate memory and change free memory size
-	found->type = MEM_TYPE_ALLOC;
-	found->next = found + size + 1; //
-	found->next->type = MEM_TYPE_FREE;
-	found->next->next = NULL;
-	found->next->size = found->size - size; //
-	found->size = size;
-
-	pointer->freeSize -= size; //
-
-	printf("Allocated address: %8x\nFragment size = %d\n", found, found->size);
-	printf("Size of = %d\n", sizeof(*found));
-
-	return (void*)found;
+	pointer->current = pointer->found->next;
+	pointer->found->type = MEM_TYPE_ALLOC;
+	pointer->found->next = pointer->found + size + 1;
+	pointer->found->next->type = MEM_TYPE_FREE;
+	pointer->found->next->next = pointer->current;
+	pointer->found->next->size = pointer->found->size - size;
+	pointer->found->size = size;
+	pointer->freeSize -= size;
+	return (void *)pointer->found;
 }
 
 int Mem_Free(void* ptr)
 {
-	mem* current = pointer->first;
-	while (current != NULL)
+	if (ptr == NULL)
 	{
-		if ((current->type == MEM_TYPE_ALLOC) && ((mem*)ptr >= current && (mem*)ptr <= (current + current->size)))
+		return -1;
+	}
+	pointer->current = pointer->first;
+	while (pointer->current != NULL)
+	{
+		if (pointer->current->type == MEM_TYPE_ALLOC && (mem *)ptr >= pointer->current && (mem *)ptr <= pointer->current + pointer->current->size)
 		{
-			current->type = 0;
-			printf("FREE\n");
+			pointer->current->type = MEM_TYPE_FREE;
+			pointer->freeSize += pointer->current->size;
 			return 0;
 		}
-		current = current->next;
+		else if ((pointer->current->type == MEM_TYPE_FREE) && ((mem *)ptr >= pointer->current && (mem *)ptr <= (pointer->current + pointer->current->size)))
+		{
+			return -1;
+		}
+		pointer->current = pointer->current->next;
 	}
-	printf("Nothing to FREE\n");
 	return -1;
 }
 
 int Mem_IsValid(void* ptr)
 {
-	mem* current = pointer->first;
-	while (current != NULL)
+	pointer->current = pointer->first;
+	while (pointer->current != NULL)
 	{
-		if ((current->type == MEM_TYPE_ALLOC) && ((mem*)ptr >= current && (mem*)ptr <= (current + current->size)))
+		if ((pointer->current->type == MEM_TYPE_ALLOC) && ((mem *)ptr >= pointer->current && (mem *)ptr <= (pointer->current + pointer->current->size)))
 		{
-			printf("Here\n");
 			return 1;
 		}
-		current = current->next;
+		else if ((pointer->current->type == MEM_TYPE_FREE) && ((mem *)ptr >= pointer->current && (mem *)ptr <= (pointer->current + pointer->current->size)))
+		{
+			return 0;
+		}
+		pointer->current = pointer->current->next;
 	}
-	printf("Nope\n");
 	return 0;
 }
 
-int Mem_GetSize(void* ptr) {
-	mem* current = pointer->first;
-	while (current != NULL)
+int Mem_GetSize(void* ptr)
+{
+	pointer->current = pointer->first;
+	while (pointer->current != NULL)
 	{
-		if ((current->type == MEM_TYPE_ALLOC) && ((mem*)ptr >= current && (mem*)ptr <= (current + current->size)))
+		if ((pointer->current->type == MEM_TYPE_ALLOC) && ((mem *)ptr >= pointer->current && (mem *)ptr <= (pointer->current + pointer->current->size)))
 		{
-			printf("Size: %d\n", current->size);
-			return current->size;
+			return pointer->current->size;
 		}
-		current = current->next;
+		else if ((pointer->current->type == MEM_TYPE_FREE) && ((mem *)ptr >= pointer->current && (mem *)ptr <= (pointer->current + pointer->current->size)))
+		{
+			return -1;
+		}
+		pointer->current = pointer->current->next;
 	}
-	printf("No object to get size of\n");
 	return -1;
 }
 
-float Mem_GetFragmentation() {
-
+float Mem_GetFragmentation()
+{
+	pointer->current = pointer->first;
+	pointer->found = NULL;
+	while (pointer->current != NULL)
+	{
+		if (pointer->current->type == MEM_TYPE_FREE && pointer->found == NULL)
+		{
+			pointer->found = pointer->current;
+		}
+		else if (pointer->current->type == MEM_TYPE_FREE && pointer->current->size > pointer->found->size)
+		{
+			pointer->found = pointer->current;
+		}
+		pointer->current = pointer->current->next;
+	}
+	return ((float)pointer->found->size/((float)pointer->freeSize));
 }
