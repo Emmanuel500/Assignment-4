@@ -10,7 +10,6 @@
 //MEM_POLICY_FIRSTFIT 0
 //MEM_POLICY_BESTFIT  1
 //MEM_POLICY_WORSTFIT 2
-
 #define REGION_SIZE (10*1024)
 #define MEM_TYPE_FREE 0
 #define MEM_TYPE_ALLOC 1
@@ -44,6 +43,7 @@ int Mem_Init(int size, int policy)
 	{
 		mem_policy = policy;
 	}
+
 	// Adjust requested size to a multiple of page size
 	int page_size = getpagesize();
 	printf("Requested memory size = %d\n", size);
@@ -56,13 +56,12 @@ int Mem_Init(int size, int policy)
 	printf("Adjusted memory size = %d\n", size);
 	int fd = open("/dev/zero", O_RDWR);
 	pointer = (head *) mmap(NULL, size, PROT_READ | PROT_WRITE, MAP_PRIVATE, fd, 0);
-
 	if (pointer == NULL)
 	{
 		return -1;
 	}
-
 	close (fd);
+
 	// Set inital struct attributes
 	pointer->freeSize = size - sizeof(*pointer);
 	pointer->first = (mem *)pointer + sizeof(*pointer);
@@ -158,10 +157,12 @@ void* Mem_Alloc(int size)
 	found->next->next = NULL;
 	found->next->size = found->size - size; //
 	found->size = size;
-	pointer->freeSize -= + size; //
+
+	pointer->freeSize -= size; //
 
 	printf("Allocated address: %8x\nFragment size = %d\n", found, found->size);
 	printf("Size of = %d\n", sizeof(*found));
+
 	return (void*)found;
 }
 
@@ -172,40 +173,45 @@ int Mem_Free(void* ptr)
 	{
 		if ((current->type == MEM_TYPE_ALLOC) && ((mem*)ptr >= current && (mem*)ptr <= (current + current->size)))
 		{
-			printf("HI\n");
+			current->type = 0;
+			printf("FREE\n");
 			return 0;
 		}
-		else
-		{
-			printf("NEXT\n");
-			current = current->next;
-		}
+		current = current->next;
 	}
-	printf("NOT\n");
+	printf("Nothing to FREE\n");
 	return -1;
 }
 
 int Mem_IsValid(void* ptr)
-
 {
 	mem* current = pointer->first;
 	while (current != NULL)
 	{
 		if ((current->type == MEM_TYPE_ALLOC) && ((mem*)ptr >= current && (mem*)ptr <= (current + current->size)))
 		{
-			printf("HI\n");
-			printf("Size: %d\n", current->size);
+			printf("Here\n");
 			return 1;
 		}
-		printf("NEXT\n");
 		current = current->next;
 	}
-	printf("NOT\n");
+	printf("Nope\n");
 	return 0;
 }
 
 int Mem_GetSize(void* ptr) {
-
+	mem* current = pointer->first;
+	while (current != NULL)
+	{
+		if ((current->type == MEM_TYPE_ALLOC) && ((mem*)ptr >= current && (mem*)ptr <= (current + current->size)))
+		{
+			printf("Size: %d\n", current->size);
+			return current->size;
+		}
+		current = current->next;
+	}
+	printf("No object to get size of\n");
+	return -1;
 }
 
 float Mem_GetFragmentation() {
