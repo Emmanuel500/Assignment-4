@@ -3,7 +3,7 @@ Homework 4
 1. Use the Makefile to create the executable:
 	$make
   
-2. Export the current library
+2. Export the current library:
 	*NOTE:	$make - prints the export command with directory path, so just copy-paste the command
 	
 	The command should look like this:
