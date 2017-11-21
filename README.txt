@@ -1,7 +1,8 @@
 Homework 4
 
 1. Use the Makefile to create the executable:
-	$make
+	*NOTE: Make sure to call your tester file main.c
+		$make
   
 2. Export the current library:
 	*NOTE:	$make - prints the export command with directory path, so just copy-paste the command
