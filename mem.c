@@ -177,6 +177,7 @@ int Mem_Free(void* ptr)
 
 					if (pointer->previous != NULL)
 					{
+						//Merge previous if its free
 						if (pointer->previous->type == MEM_TYPE_FREE)
 						{
 							pointer->previous->size += pointer->current->size;
@@ -193,6 +194,7 @@ int Mem_Free(void* ptr)
 					pointer->current->type = MEM_TYPE_FREE;
 					pointer->freeSize += pointer->current->size;
 
+					//Merge next if its free
 					if (pointer->current->next->type == MEM_TYPE_FREE)
 					{
 						pointer->current->size += pointer->current->next->size;
@@ -200,6 +202,7 @@ int Mem_Free(void* ptr)
 					}
 					if (pointer->previous != NULL)
 					{
+						//Merge previous if its free
 						if (pointer->previous->type == MEM_TYPE_FREE)
 						{
 							pointer->previous->size += pointer->current->size;
