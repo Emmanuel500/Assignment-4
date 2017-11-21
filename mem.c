@@ -66,7 +66,7 @@ int Mem_Init(int size, int policy)
 
 	// Set inital struct attributes
 	pointer->freeSize = size - sizeof(*pointer);
-	pointer->first = (mem *)pointer + sizeof(*pointer);
+	pointer->first = (void *)pointer + sizeof(*pointer);
 	pointer->first->size = pointer->freeSize;
 	pointer->first->type = MEM_TYPE_FREE;
 	pointer->first->next = NULL;
@@ -147,7 +147,7 @@ void* Mem_Alloc(int size)
 	// Allocate memory and change free memory size
 	pointer->current = pointer->found->next;
 	pointer->found->type = MEM_TYPE_ALLOC;
-	pointer->found->next = pointer->found + size;
+	pointer->found->next = (void *)pointer->found + size;
 	pointer->found->next->type = MEM_TYPE_FREE;
 	pointer->found->next->next = pointer->current;
 	pointer->found->next->size = pointer->found->size - size;
@@ -170,7 +170,7 @@ int Mem_Free(void* ptr)
 		{
 			if (pointer->current->next == NULL)
 			{
-				if ((mem *)ptr >= pointer->current && (mem *)ptr <= pointer->current + pointer->current->size)
+				if (ptr >= (void *)pointer->current && ptr <= (void *)pointer->current + pointer->current->size)
 				{
 					pointer->current->type = MEM_TYPE_FREE;
 					pointer->freeSize += pointer->current->size;
@@ -188,7 +188,7 @@ int Mem_Free(void* ptr)
 			}
 			else
 			{
-				if ((mem *)ptr >= pointer->current && (mem *)ptr < pointer->current->next)
+				if (ptr >= (void *)pointer->current && ptr < (void *)pointer->current->next)
 				{
 					pointer->current->type = MEM_TYPE_FREE;
 					pointer->freeSize += pointer->current->size;
@@ -214,14 +214,14 @@ int Mem_Free(void* ptr)
 		{
 			if (pointer->current->next == NULL)
 			{
-				if ((mem *)ptr >= pointer->current && (mem *)ptr <= pointer->current + pointer->current->size)
+				if (ptr >= (void *)pointer->current && ptr <= (void *)pointer->current + pointer->current->size)
 				{
 					return -1;
 				}
 			}
 			else
 			{
-				if ((mem *)ptr >= pointer->current && (mem *)ptr < pointer->current->next)
+				if (ptr >= (void *)pointer->current && ptr < (void *)pointer->current->next)
 				{
 					return -1;
 				}
@@ -242,14 +242,14 @@ int Mem_IsValid(void* ptr)
 		{
 			if (pointer->current->next == NULL)
 			{
-				if ((mem *)ptr >= pointer->current && (mem *)ptr <= pointer->current + pointer->current->size)
+				if (ptr >= (void *)pointer->current && ptr <= (void *)pointer->current + pointer->current->size)
 				{
 					return 1;
 				}
 			}
 			else
 			{
-				if ((mem *)ptr >= pointer->current && (mem *)ptr < pointer->current->next)
+				if (ptr >= (void *)pointer->current && ptr < (void *)pointer->current->next)
 				{
 					return 1;
 				}
@@ -259,14 +259,14 @@ int Mem_IsValid(void* ptr)
 		{
 			if (pointer->current->next == NULL)
 			{
-				if ((mem *)ptr >= pointer->current && (mem *)ptr <= pointer->current + pointer->current->size)
+				if (ptr >= (void *)pointer->current && ptr <= (void *)pointer->current + pointer->current->size)
 				{
 					return 0;
 				}
 			}
 			else
 			{
-				if ((mem *)ptr >= pointer->current && (mem *)ptr < pointer->current->next)
+				if (ptr >= (void *)pointer->current && ptr < (void *)pointer->current->next)
 				{
 					return 0;
 				}
@@ -286,14 +286,14 @@ int Mem_GetSize(void* ptr)
 		{
 			if (pointer->current->next == NULL)
 			{
-				if ((mem *)ptr >= pointer->current && (mem *)ptr <= pointer->current + pointer->current->size)
+				if (ptr >= (void *)pointer->current && ptr <= (void *)pointer->current + pointer->current->size)
 				{
 					return pointer->current->size;
 				}
 			}
 			else
 			{
-				if ((mem *)ptr >= pointer->current && (mem *)ptr < pointer->current->next)
+				if (ptr >= (void *)pointer->current && ptr < (void *)pointer->current->next)
 				{
 					return pointer->current->size;
 				}
@@ -303,14 +303,14 @@ int Mem_GetSize(void* ptr)
 		{
 			if (pointer->current->next == NULL)
 			{
-				if ((mem *)ptr >= pointer->current && (mem *)ptr <= pointer->current + pointer->current->size)
+				if (ptr >= (void *)pointer->current && ptr <= (void *)pointer->current + pointer->current->size)
 				{
 					return -1;
 				}
 			}
 			else
 			{
-				if ((mem *)ptr >= pointer->current && (mem *)ptr < pointer->current->next)
+				if (ptr >= (void *)pointer->current && ptr < (void *)pointer->current->next)
 				{
 					return -1;
 				}
@@ -337,5 +337,5 @@ float Mem_GetFragmentation()
 		}
 		pointer->current = pointer->current->next;
 	}
-	return ((float)pointer->found->size/(float)pointer->freeSize);
+	return (float)pointer->found->size/(float)pointer->freeSize;
 }
