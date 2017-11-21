@@ -1,7 +1,5 @@
 #Makefile
 current_dir = $(shell pwd)
-#export LD_LIBRARY_PATH=/home/cop4610/Desktop/MemAllocator
-export LD_LIBRARY_PATH=$(current_dir)
 make:
 	gcc -c -fpic mem.c
 	gcc -shared -o libmem.so mem.o
